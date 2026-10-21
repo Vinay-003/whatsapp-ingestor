@@ -89,7 +89,9 @@ export class PostProcessor {
 
 			if (!inserted.rows[0]) {
 				await client.query('rollback');
-				log.info('duplicate_skipped', { channelId, messageId: post.messageId });
+				// Debug level: a backfill re-reads the whole history, so this
+				// would otherwise emit thousands of lines per channel.
+				log.debug('duplicate_skipped', { channelId, messageId: post.messageId });
 				return { outcome: 'duplicate', reason: 'source post already stored' };
 			}
 
