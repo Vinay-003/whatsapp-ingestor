@@ -11,3 +11,5 @@ logs/
 .DS_Store
 supabase/.temp/
 supabase/migrations/003_app_role_password.sql
+
+render-env.local.txt

@@ -1,0 +1,58 @@
+# Render service definition for the WhatsApp channel ingestor.
+#
+# IMPORTANT RENDER FREE-TIER NOTES (verify against Render's current docs):
+#   * A free web service spins down after a period without inbound traffic.
+#     The WhatsApp connection therefore drops while it sleeps and is
+#     re-established on the next request, using the session stored in
+#     Postgres. This works because the session is NOT on the (ephemeral)
+#     filesystem.
+#   * Free web services historically offer ~512 MB RAM, 0.1 CPU, no persistent
+#     disk and a monthly instance-hour allowance. The measured footprint of
+#     this service is ~115 MB RSS and ~0 % CPU while idle.
+#   * Render may start a new instance while the previous one is still winding
+#     down. Both would then use the same WhatsApp session, and the second
+#     client is disconnected with status 440. The service therefore takes a
+#     database lease (connector.lease) and waits for it instead of starting
+#     two clients.
+#
+# The health check path is /healthz, NOT /health: /health requires a bearer
+# token and would answer 401, which the platform would read as a failure.
+#
+# Secrets are set in the Render dashboard, never in this file:
+#   DATABASE_URL            postgresql://... (Supabase pooler)
+#   SESSION_ENCRYPTION_KEY  64 hex chars (openssl rand -hex 32)
+#   HEALTH_PING_SECRET      long random string (openssl rand -hex 32)
+
+services:
+  - type: web
+    name: whatsapp-job-ingestor
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: LOG_LEVEL
+        value: info
+      - key: WHATSAPP_CHANNEL_URL
+        value: https://whatsapp.com/channel/0029Va6I79K60eBfQ92DwH0W
+      - key: HISTORY_BACKFILL_INTERVAL_MINUTES
+        value: "60"
+      - key: CHANNEL_DISCOVERY_INTERVAL_MINUTES
+        value: "30"
+      - key: LIVE_RESUBSCRIBE_SECONDS
+        value: "60"
+      - key: HISTORY_PAGE_SIZE
+        value: "200"
+      - key: MAX_HISTORY_PAGES
+        value: "60"
+      - key: LEASE_TTL_SECONDS
+        value: "120"
+      - key: LEASE_WAIT_SECONDS
+        value: "180"
