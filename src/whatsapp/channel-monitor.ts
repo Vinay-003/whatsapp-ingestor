@@ -118,11 +118,16 @@ export class ChannelMonitor {
 				pageSize: this.options.historyPageSize ?? 200,
 				maxPages
 			});
+			const name = this.known.get(channelId)?.name ?? null;
 			let stored = 0;
+			let duplicates = 0;
 			for (const post of posts) {
-				const result = await processor.process(post, channelId);
+				const result = await processor.process(post, channelId, name);
 				if (result.outcome === 'created' || result.outcome === 'needs_review') stored += 1;
+				if (result.outcome === 'duplicate') duplicates += 1;
 			}
+			if (stored) await repos.bumpCounter('posts_ingested', stored).catch(() => undefined);
+			if (duplicates) await repos.bumpCounter('duplicates_skipped', duplicates).catch(() => undefined);
 			const timestamps = posts.map(p => p.timestamp).filter((t): t is string => !!t).sort();
 			await repos.updateChannelStats(channelId, {
 				postCount: posts.length,
