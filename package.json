@@ -1,0 +1,31 @@
+{
+  "name": "whatsapp-job-ingestor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ingests job posts from public WhatsApp channels and publishes them to the job board",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc -p tsconfig.tools.json",
+    "test": "node --test --import tsx tests/*.test.ts",
+    "pair": "tsx scripts/pair.ts",
+    "discover": "tsx scripts/discover-channels.ts",
+    "db:push": "supabase db push --linked"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "dotenv": "^17.2.3",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.1",
+    "@types/pg": "^8.15.6",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
