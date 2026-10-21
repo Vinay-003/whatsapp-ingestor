@@ -1,0 +1,15 @@
+{
+  "name": "whatsapp-channel-test",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local feasibility test for reading a public WhatsApp channel via Baileys",
+  "main": "test-a-auth-resolve.js",
+  "scripts": {
+    "test:a": "node test-a-auth-resolve.js",
+    "test:b": "node test-b-history.js",
+    "test:c": "node test-c-live.js",
+    "test:d": "node test-d-reconnect.js",
+    "test:e": "node test-e-resources.js"
+  },
+  "license": "MIT"
+}
