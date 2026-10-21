@@ -207,6 +207,10 @@ export class BaileysAdapter implements Connector {
 			// is the expected post-pairing signal and must be retried.
 			if (status === '401' || status === '403') {
 				this.readyReject?.(new Error(`session rejected by WhatsApp (status ${status})`));
+				log.error('connector_session_rejected', {
+					status,
+					hint: 'the WhatsApp session is no longer valid — re-pair with `npm run pair` (writes a QR to pairing-qr.png)'
+				});
 				this.options.onFatal?.(`session rejected by WhatsApp (status ${status})`);
 				return;
 			}
