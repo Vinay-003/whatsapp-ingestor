@@ -36,6 +36,8 @@ async function main(): Promise<void> {
 		instanceId: config.instanceId
 	});
 
+	let shuttingDown = false;
+
 	const pool = createPool(config.databaseUrl);
 	const repos = new Repositories(pool);
 
@@ -83,6 +85,27 @@ async function main(): Promise<void> {
 	}
 	leaseHeld = true;
 	log.info('lease_acquired', { instanceId: config.instanceId });
+
+	// RENEW the lease while this instance is alive.
+	//
+	// The lease row has an expiry, and the holder has to keep pushing it out.
+	// Without this renewal the lease silently expires while its holder is
+	// still connected, a second instance can then take it, and the two
+	// clients fight over the same WhatsApp session (status 440, kicking each
+	// other off in a loop).
+	const leaseRenewTimer = setInterval(
+		() => {
+			if (shuttingDown) return;
+			void repos
+				.acquireLease(config.instanceId, config.leaseTtlSeconds)
+				.then(ok => {
+					if (!ok) log.warn('lease_renew_failed', { instanceId: config.instanceId });
+				})
+				.catch(err => log.warn('lease_renew_error', { error: errorMessage(err) }));
+		},
+		Math.max(15_000, Math.floor((config.leaseTtlSeconds * 1000) / 3))
+	);
+	leaseRenewTimer.unref?.();
 
 	// --- connector ------------------------------------------------------------
 	const store = new SupabaseSessionStore({ pool, encryptionKey: config.sessionEncryptionKey });
@@ -167,12 +190,12 @@ async function main(): Promise<void> {
 	}, 60_000);
 	memoryTimer.unref?.();
 
-	let shuttingDown = false;
 	const shutdown = async (signal: string): Promise<void> => {
 		if (shuttingDown) return;
 		shuttingDown = true;
 		log.info('service_stopping', { signal });
 		monitor.stop();
+		clearInterval(leaseRenewTimer);
 		try {
 			await adapter.stop();
 		} catch {
